@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
+﻿
 namespace DataAccess.Constants
 {
-    class SqlExceptionType
+    public enum SqlExceptionType
     {
+        DropTableError = 3701,
+        NetworkError = 17829,
+        LinkEstablishmentError = 32054
     }
 }

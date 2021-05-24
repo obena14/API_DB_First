@@ -4,7 +4,9 @@ using System.Text;
 
 namespace DataAccess.Attributes
 {
-    class TableAttribute
+    [AttributeUsage(AttributeTargets.Class)]
+    public class TableAttribute:Attribute
     {
+        public string Name { get; set; }
     }
 }

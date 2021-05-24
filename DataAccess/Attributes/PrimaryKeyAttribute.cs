@@ -4,7 +4,8 @@ using System.Text;
 
 namespace DataAccess.Attributes
 {
-    class PrimaryKeyAttribute
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
+    public class PrimaryKeyAttribute :Attribute
     {
     }
 }
