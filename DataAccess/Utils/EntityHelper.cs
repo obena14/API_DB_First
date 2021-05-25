@@ -60,10 +60,48 @@ namespace DataAccess.Utils
             }
             return tableDataTransportEntities.ToList();
         }
+        public static Dictionary<string, object> GenerateParametersAndValue<TEntity>(this TEntity entity, bool excludePrimaryKey = false)
+            where TEntity : RepositoryEntity
+        {
+            var properties = GetProperties<TEntity>();
+            var propColumnNamesAndValues = properties.Select(x => new
+            {
+                ParameterName = x.Name.ToNormalizedParameterNameString(),
+                ColumnName = x.GetCustomAttributes(true)
+                    .Select(y => (y as ColumnAttribute)?.Name)
+                    .Where(y => y != null)
+                    .FirstOrDefault(),
+                Value = x.GetValue(entity) ?? null
+            })
+            .Where(x => x?.ParameterName != null);
+
+            if (excludePrimaryKey)
+            {
+                var entityDetails = GetEntityDetails<TEntity>();
+
+                propColumnNamesAndValues = propColumnNamesAndValues
+                    .Where(x => x.ColumnName != entityDetails?.PrimaryKeyColumnyName
+                        && (entityDetails.PrimaryKeColumnyName2 != null
+                        ? (x.ColumnName != entityDetails.PrimaryKeColumnyName2)
+                        : true));
+            }
+
+            return propColumnNamesAndValues
+                .ToDictionary(x => x.ParameterName, x => x.Value);
+        }
         public static string ToNormalizedParameterNameString(this string str)
         {
             var normalizedString = str.Replace(" ", "_");
             return $"@{normalizedString}";
+        }
+        public static TPrimaryKey GetPrimaryKeyValue<TEntity, TPrimaryKey>(this TEntity entity)
+        where TEntity : RepositoryEntity
+        {
+            var entityDetails = GetEntityDetails<TEntity>();
+
+            return (TPrimaryKey)entity.GetType()
+                .GetProperty(entityDetails.PrimaryKeyName)
+                .GetValue(entity);
         }
         private static PropertyInfo[] GetProperties<TEntity>() 
             where TEntity : RepositoryEntity

@@ -268,13 +268,82 @@ namespace DataAccess
                        OUTPUT COALESCE(SCOPE_IDENTITY(), Inserted.[{entityDetails.PrimaryKeyColumnyName}])
                         VALUES({parameterString})";
 
-                var parameterAndValues = entity.
+                var parameterAndValues = entity.GenerateParametersAndValue(true);
 
+                var newEntityId = _dbConnection.ExecuteScalar<TPrimaryKey>(command, parameterAndValues);
+
+                var result = Get(newEntityId);
+
+                return result;
 
             }
             catch(Exception ex)
             {
                 _logger.Error($"Exception occured in '{ typeof(RepositoryBase<TEntity, TPrimaryKey>).FullName}.{nameof(Insert)}'. ", ex);
+                throw ex;
+            }
+        }
+        public virtual int Update(TEntity entity)
+        {
+            try
+            {
+                var entityDetails = EntityHelper.GetEntityDetails<TEntity>();
+                var tableData = EntityHelper.GetTableColumnInfo<TEntity>(exludePrimaryKey: true);
+
+                var primaryKeyValue = entity.GetPrimaryKeyValue<TEntity, TPrimaryKey>();
+                var setValueString = string.Join(", ", tableData.Select(x => $"[{x.ColumnName}] = {x.ParameterName}"));
+                var normalizedParameterNameString = entityDetails.PrimaryKeyName
+                    .ToNormalizedParameterNameString();
+
+                var command =
+                    $@"UPDATE [{_tableName}]
+                       SET {setValueString}
+                       WHERE [{entityDetails.PrimaryKeyName}] = {normalizedParameterNameString}";
+
+                var parameterAndValues = entity.GenerateParametersAndValue();
+
+                var rowsAffectedCount = _dbConnection.Execute(command, parameterAndValues);
+
+                return rowsAffectedCount;
+
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Exception occured in '{ typeof(RepositoryBase<TEntity, TPrimaryKey>).FullName}.{nameof(Update)}'. ", ex);
+                throw ex;
+            }
+        }
+        public virtual int Delete(TEntity entity)
+        {
+            try
+            {
+                var entityDetails = EntityHelper.GetEntityDetails<TEntity>();
+                
+                var primaryKeyValue = entity.GetPrimaryKeyValue<TEntity, TPrimaryKey>();
+
+                if (primaryKeyValue == null)
+                    throw new ArgumentNullException(entityDetails.PrimaryKeyName);
+
+                var dynamicParameters = new DynamicParameters();
+
+                var normalizedParameterNameString = entityDetails.PrimaryKeyName
+                    .ToNormalizedParameterNameString();
+
+                dynamicParameters.Add(normalizedParameterNameString, primaryKeyValue);
+
+                var command =
+                    $@"DELETE FROM [{_tableName}]
+                       WHERE [{entityDetails.PrimaryKeyName}] = {normalizedParameterNameString}";
+
+              
+                var rowsAffectedCount = _dbConnection.Execute(command, dynamicParameters);
+
+                return rowsAffectedCount;
+
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Exception occured in '{ typeof(RepositoryBase<TEntity, TPrimaryKey>).FullName}.{nameof(Delete)}'. ", ex);
                 throw ex;
             }
         }
